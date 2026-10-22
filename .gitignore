@@ -66,3 +66,6 @@ fastlane/test_output/
 # Python bytecode from scripts/tests
 __pycache__/
 .hermex-upstream.sha
+/.android/
+/.gradle-user-home/
+/analytics.settings
