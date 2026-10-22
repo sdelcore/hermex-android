@@ -1,6 +1,7 @@
 .gradle/
 .gradle-user-home/
 .android/
+.kotlin/
 analytics.settings
 local.properties
 build/
