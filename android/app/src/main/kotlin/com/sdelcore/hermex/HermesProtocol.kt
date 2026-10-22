@@ -42,13 +42,13 @@ object HermesProtocol {
 
     fun parseChatStart(source: String): ChatStart {
         val obj = json.parseToJsonElement(source).jsonObject
-        return ChatStart(obj.string("streamId"), obj.string("sessionId"), obj.string("error"))
+        return ChatStart(obj.string("stream_id") ?: obj.string("streamId"), obj.string("session_id") ?: obj.string("sessionId"), obj.string("error"))
     }
 
     fun parseSessions(source: String): List<SessionRow> =
         json.parseToJsonElement(source).jsonObject["sessions"]?.jsonArray.orEmpty().mapNotNull { element ->
             val row = element as? JsonObject ?: return@mapNotNull null
-            SessionRow(row.string("sessionId"), row.string("title"))
+            SessionRow(row.string("session_id") ?: row.string("sessionId"), row.string("title"))
         }
 
     class SseParser {

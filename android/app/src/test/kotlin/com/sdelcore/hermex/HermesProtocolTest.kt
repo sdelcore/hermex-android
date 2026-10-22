@@ -2,23 +2,24 @@ package com.sdelcore.hermex
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 class HermesProtocolTest {
-    @Test fun parsesSwiftChatStartResponse() {
-        val start = HermesProtocol.parseChatStart("""{"streamId":"str-1","sessionId":"ses-1"}""")
-        assertEquals("str-1", start.streamId)
-        assertEquals("ses-1", start.sessionId)
+    @Test fun parsesSnakeCaseChatStartResponse() {
+        assertEquals("str-1", HermesProtocol.parseChatStart("""{"stream_id":"str-1"}""").streamId)
     }
 
-    @Test fun parsesSwiftSessionRows() {
-        val rows = HermesProtocol.parseSessions("""{"sessions":[{"sessionId":"ses-1","title":"First"}]}""")
+    @Test fun parsesCamelCaseChatStartResponse() {
+        assertEquals("str-1", HermesProtocol.parseChatStart("""{"streamId":"str-1"}""").streamId)
+    }
+
+    @Test fun parsesSnakeCaseSessionRows() {
+        val rows = HermesProtocol.parseSessions("""{"sessions":[{"session_id":"ses-1","title":"First"}]}""")
         assertEquals(listOf(HermesProtocol.SessionRow("ses-1", "First")), rows)
     }
 
-    @Test fun rejectsSnakeCaseSessionId() {
-        val row = HermesProtocol.parseSessions("""{"sessions":[{"session_id":"ses-1","title":"First"}]}""").single()
-        assertNull(row.sessionId)
+    @Test fun parsesCamelCaseSessionRows() {
+        val rows = HermesProtocol.parseSessions("""{"sessions":[{"sessionId":"ses-1","title":"First"}]}""")
+        assertEquals(listOf(HermesProtocol.SessionRow("ses-1", "First")), rows)
     }
 
     @Test fun incrementallyParsesTypedSseFrames() {
