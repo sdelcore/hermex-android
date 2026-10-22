@@ -1,0 +1,7 @@
+.gradle/
+.gradle-user-home/
+.android/
+analytics.settings
+local.properties
+build/
+app/build/
