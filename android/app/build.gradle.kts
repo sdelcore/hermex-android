@@ -30,4 +30,6 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.3")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation(kotlin("test"))
 }
