@@ -53,6 +53,10 @@ class MainActivity : ComponentActivity() {
         OutlinedTextField(token, { token = it }, label = { Text("API token") }, modifier = Modifier.fillMaxWidth())
         Button(onClick = { scope.launch {
             val base = url.trim().trimEnd('/')
+            if (openSavedHermesServer(prefs[baseUrlKey].orEmpty(), base)) {
+                connected()
+                return@launch
+            }
             activity.settings.edit { it[baseUrlKey] = base; it[tokenKey] = token }
             client.newCall(HermesProtocol.healthRequest(base, token)).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) { activity.runOnUiThread { status = e.message ?: "Connection failed" } }
@@ -60,9 +64,18 @@ class MainActivity : ComponentActivity() {
             })
         } }) { Text("Test connection") }
         Text(status)
-        Button(onClick = { scope.launch { activity.settings.edit { it[baseUrlKey] = url.trim().trimEnd('/'); it[tokenKey] = token }; connected() } }) { Text("Open sessions") }
+        Button(onClick = { scope.launch {
+            val base = url.trim().trimEnd('/')
+            if (!openSavedHermesServer(prefs[baseUrlKey].orEmpty(), base)) {
+                activity.settings.edit { it[baseUrlKey] = base; it[tokenKey] = token }
+            }
+            connected()
+        } }) { Text("Open sessions") }
     }
 }
+
+internal fun openSavedHermesServer(savedAddress: String, address: String): Boolean =
+    address.isNotBlank() && savedAddress.trimEnd('/') == address
 
 @Composable private fun Sessions(activity: MainActivity, open: (String) -> Unit) {
     val prefs by activity.settings.data.collectAsState(initial = androidx.datastore.preferences.core.emptyPreferences())
