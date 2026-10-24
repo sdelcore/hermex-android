@@ -4,6 +4,14 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class HermesProtocolTest {
+
+    @Test fun savedServerShortcutRequiresAnExactNonblankAddress() {
+        assertEquals(true, openSavedHermesServer("https://hermes.example", "https://hermes.example"))
+        assertEquals(true, openSavedHermesServer("https://hermes.example/", "https://hermes.example"))
+        assertEquals(false, openSavedHermesServer("", "https://hermes.example"))
+        assertEquals(false, openSavedHermesServer("https://hermes.example", "https://other.example"))
+        assertEquals(false, openSavedHermesServer("https://hermes.example", ""))
+    }
     @Test fun parsesSnakeCaseChatStartResponse() {
         assertEquals("str-1", HermesProtocol.parseChatStart("""{"stream_id":"str-1"}""").streamId)
     }
