@@ -14,7 +14,7 @@ Statuses: `done` means this Android slice is implemented; `partial` means only t
 | Insights | `HermesMobile/Features/Insights/` | todo | — |
 | Bots | `HermesMobile/Features/Bots/` | todo | — |
 | Settings | `HermesMobile/Features/Settings/` | partial — base URL/token and connection probe | `app/src/main/kotlin/com/sdelcore/hermex/MainActivity.kt` |
-| Onboarding | `HermesMobile/Features/Onboarding/` | partial — connection form | `app/src/main/kotlin/com/sdelcore/hermex/MainActivity.kt` |
+| Onboarding | `HermesMobile/Features/Onboarding/` | partial — connection form; Connect and Test Connection open an already-saved Hermes server at its address without probing/signing in | `app/src/main/kotlin/com/sdelcore/hermex/MainActivity.kt` |
 | Share | `HermesShareExtension/` | n/a — Android shares through intents, no iOS extension | — |
 | MoveToHermes | `HermesMobile/Features/MoveToHermes/` | todo | — |
 | Workspace | `HermesMobile/Features/Workspace/` | todo | — |
