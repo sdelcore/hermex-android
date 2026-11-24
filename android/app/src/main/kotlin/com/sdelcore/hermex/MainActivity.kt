@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.edit
@@ -77,6 +78,12 @@ class MainActivity : ComponentActivity() {
 internal fun openSavedHermesServer(savedAddress: String, address: String): Boolean =
     address.isNotBlank() && savedAddress.trimEnd('/') == address
 
+/** A composer error describes one failed attempt, so editing the draft or tapping Dismiss clears it. */
+internal data class ComposerError(val text: String = "") {
+    val isShown: Boolean get() = text.isNotBlank()
+    fun afterEdit(): ComposerError = if (text.isBlank()) this else ComposerError()
+}
+
 @Composable private fun Sessions(activity: MainActivity, open: (String) -> Unit) {
     val prefs by activity.settings.data.collectAsState(initial = androidx.datastore.preferences.core.emptyPreferences())
     var rows by remember { mutableStateOf(emptyList<HermesProtocol.SessionRow>()) }
@@ -100,28 +107,28 @@ internal fun openSavedHermesServer(savedAddress: String, address: String): Boole
     var streamId by remember { mutableStateOf("") }
     var reply by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf(ComposerError()) }
     val base = prefs[baseUrlKey].orEmpty(); val token = prefs[tokenKey].orEmpty()
     fun send() {
         if (message.isBlank()) return
-        val text = message; message = ""; reply = ""; busy = true; error = ""
+        val text = message; message = ""; reply = ""; busy = true; error = ComposerError()
         client.newCall(HermesProtocol.chatStartRequest(base, token, id, text)).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) { activity.runOnUiThread { error = e.message.orEmpty(); busy = false } }
+            override fun onFailure(call: Call, e: IOException) { activity.runOnUiThread { error = ComposerError(e.message.orEmpty()); busy = false } }
             override fun onResponse(call: Call, response: Response) { response.use {
-                if (!it.isSuccessful) { activity.runOnUiThread { error = "HTTP ${it.code}"; busy = false }; return }
-                val start = runCatching { HermesProtocol.parseChatStart(it.body?.string().orEmpty()) }.getOrElse { failure -> activity.runOnUiThread { error = failure.message.orEmpty(); busy = false }; return }
+                if (!it.isSuccessful) { activity.runOnUiThread { error = ComposerError("HTTP ${it.code}"); busy = false }; return }
+                val start = runCatching { HermesProtocol.parseChatStart(it.body?.string().orEmpty()) }.getOrElse { failure -> activity.runOnUiThread { error = ComposerError(failure.message.orEmpty()); busy = false }; return }
                 val sid = start.streamId
-                if (sid.isNullOrBlank()) { activity.runOnUiThread { error = start.error ?: "Missing stream ID"; busy = false }; return }
+                if (sid.isNullOrBlank()) { activity.runOnUiThread { error = ComposerError(start.error ?: "Missing stream ID"); busy = false }; return }
                 activity.runOnUiThread { streamId = sid }
                 client.newCall(HermesProtocol.streamRequest(base, token, sid)).execute().use { stream ->
                     val source = stream.body?.source()
-                    if (source == null) { activity.runOnUiThread { error = "Empty stream"; busy = false }; return@use }
+                    if (source == null) { activity.runOnUiThread { error = ComposerError("Empty stream"); busy = false }; return@use }
                     val parser = HermesProtocol.SseParser()
                     while (!source.exhausted()) {
                         val line = source.readUtf8Line() ?: break
                         when (val frame = parser.feed(line)) {
                             is HermesProtocol.StreamFrame.Token -> activity.runOnUiThread { reply += frame.text }
-                            is HermesProtocol.StreamFrame.Error -> activity.runOnUiThread { error = frame.message ?: "Stream error" }
+                            is HermesProtocol.StreamFrame.Error -> activity.runOnUiThread { error = ComposerError(frame.message ?: "Stream error") }
                             HermesProtocol.StreamFrame.StreamEnd, HermesProtocol.StreamFrame.Cancelled -> break
                             null -> Unit
                         }
@@ -132,8 +139,12 @@ internal fun openSavedHermesServer(savedAddress: String, address: String): Boole
         })
     }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Chat", style = MaterialTheme.typography.headlineSmall); Text(id); Text(reply); Text(error)
-        Row { OutlinedTextField(message, { message = it }, modifier = Modifier.weight(1f), label = { Text("Message") }); Button(onClick = { send() }) { Text("Send") } }
+        Text("Chat", style = MaterialTheme.typography.headlineSmall); Text(id); Text(reply)
+        if (error.isShown) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(error.text, modifier = Modifier.weight(1f))
+            TextButton(onClick = { error = ComposerError() }) { Text("Dismiss") }
+        }
+        Row { OutlinedTextField(message, { message = it; error = error.afterEdit() }, modifier = Modifier.weight(1f), label = { Text("Message") }); Button(onClick = { send() }) { Text("Send") } }
         if (busy) Button(onClick = { val sid = streamId; client.newCall(HermesProtocol.cancelRequest(base, token, sid)).enqueue(object : Callback { override fun onFailure(call: Call, e: IOException) {}; override fun onResponse(call: Call, response: Response) { response.close(); activity.runOnUiThread { busy = false } } }) }) { Text("Stop") }
     }
 }
